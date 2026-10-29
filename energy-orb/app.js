@@ -31,7 +31,8 @@ function setHeld(value){if(mode!=='demo')return;advanceDemo(performance.now());h
 function glow(x,y,r,alpha=1,color='blue'){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=alpha;const g=ctx.createRadialGradient(x-r*.19,y-r*.21,0,x,y,r*1.75);g.addColorStop(0,'#ffffff');g.addColorStop(.15,color==='gold'?'#fff4ba':'#e4faff');g.addColorStop(.35,'#90dfffcc');g.addColorStop(.55,'#299aff88');g.addColorStop(.8,'#1580e933');g.addColorStop(1,'#0b5fc500');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*1.75,0,Math.PI*2);ctx.fill();ctx.restore();}
 // Match GRPS Particle Logo Reveal: fine filled points, restrained sparse halos,
 // randomized positions and eased assembly, without bright sprite beads or orbit outlines.
-const orbDust=Array.from({length:innerWidth<650?2600:4600},(_,i)=>{
+const orbBaseCount=innerWidth<650?2600:4600;
+const orbDust=Array.from({length:orbBaseCount*4},(_,i)=>{
  const z=rand(-1,1),a=rand(0,Math.PI*2),rad=Math.sqrt(1-z*z),depth=Math.cbrt(Math.random());
  return {x:Math.cos(a)*rad*depth,y:z*depth,z:Math.sin(a)*rad*depth,size:rand(.7,1.7),phase:rand(0,6.283),halo:i%13===0};
 });
@@ -41,13 +42,18 @@ function finePoint(x,y,size,alpha,halo=false){
 }
 function drawOrb(x,y,r,power,alpha=1){
  ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle='#8ccfff';
+ // Keep projected light coverage constant as radius grows. Add points first,
+ // then gently scale their footprint after the pool limit, without extra opacity.
+ const baseRadius=Math.min(W,H)*.035,areaScale=Math.max(1,(r/baseRadius)**2);
+ const pointCount=Math.min(orbDust.length,Math.round(orbBaseCount*areaScale));
+ const pointScale=Math.sqrt(areaScale*orbBaseCount/pointCount);
  const angle=reduced?0:time*.13,c=Math.cos(angle),s=Math.sin(angle);
- for(const p of orbDust){
+ for(let i=0;i<pointCount;i++){const p=orbDust[i];
   const xx=p.x*c+p.z*s,depth=-p.x*s+p.z*c,perspective=1/(1-depth*.12);
   const drift=reduced?0:Math.sin(time*1.7+p.phase)*.012;
   const px=x+(xx+drift)*r*perspective,py=y+(p.y+drift*.6)*r*perspective;
   const brightness=.38+(depth+1)*.24;
-  finePoint(px,py,p.size*.76*(.85+depth*.15),alpha*brightness,p.halo);
+  finePoint(px,py,p.size*.76*(.85+depth*.15)*pointScale,alpha*brightness,p.halo);
  }
  ctx.restore();
 }
