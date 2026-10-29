@@ -37,3 +37,7 @@ Real camera acquisition and actual human pose recognition have not been tested o
 ## Fast release update
 
 The shot uses wall-clock time rather than capped render deltas. It travels offscreen in 0.24 seconds, with a tapered beam trail, a 0.34-second shockwave and a short noise/low-frequency audio impact. Total effect lifetime is 0.44 seconds; reduced-motion mode omits streaks and the full-screen flash. Release confirmation is 75 ms and the cooldown is 0.7 seconds. Lost-tracking disarm and re-arming requirements are retained.
+
+## Particle orb update
+
+Incoming light is represented by soft round particles rather than line segments. The rotating orbit outlines and solid central glow are replaced by 520 softly glowing particles in a rotating three-dimensional spherical volume. Depth affects their size and brightness; the center retains a restrained glow so the individual particles remain visible. Fast launch timing is unchanged.
