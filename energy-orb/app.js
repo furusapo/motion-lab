@@ -1,9 +1,14 @@
-import {EnergyGesture,classifyPose,clamp} from './gesture.js';
+import {blastAt,BLAST_LIFETIME} from './blast.js?v=fast-1';
+import {EnergyGesture,classifyPose,clamp} from './gesture.js?v=fast-1';
 const $=s=>document.querySelector(s),canvas=$('#effects'),ctx=canvas.getContext('2d'),video=$('#camera'),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio,1.5),mode='welcome',stream=null,tracker=null,generation=0,sample={valid:false},lastResult=-Infinity,lastInfer=0,modelPromise=null,cameraFacing='user',held=false,engine=new EnergyGesture(),snapshot=engine.result(false),last=performance.now(),time=0,shots=[],orb={x:W*.68,y:H*.32},audio=null,gain=null,hum=null,sound=false,activeToken=0;const particles=Array.from({length:140},(_,i)=>({a:i*2.399963,r:90+(i*71)%440,s:(i*.618033)%1,k:.6+(i%8)/8}));
 function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio,1.5);canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}resize();addEventListener('resize',resize);
 function audioInit(){if(audio)return;audio=new (window.AudioContext||window.webkitAudioContext)();gain=audio.createGain();gain.gain.value=0;gain.connect(audio.destination);hum=audio.createOscillator();hum.type='sine';hum.frequency.value=95;hum.connect(gain);hum.start()}
 $('#sound').onclick=()=>{sound=!sound;try{if(sound){audioInit();audio.resume()}else if(gain)gain.gain.setTargetAtTime(0,audio.currentTime,.1)}catch{sound=false}$('#sound').textContent=sound?'音 ON':'音 OFF';$('#sound').setAttribute('aria-pressed',sound)};
-function shotSound(power){if(!audio||!sound)return;const t=audio.currentTime;for(const f of [240,390,610]){const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.24,t+.7);g.gain.setValueAtTime(.04+power*.025,t);g.gain.exponentialRampToValueAtTime(.0001,t+.8);o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.85)}}
+function shotSound(power){if(!audio||!sound)return;const t=audio.currentTime;
+ const buffer=audio.createBuffer(1,Math.ceil(audio.sampleRate*.25),audio.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*(1-i/data.length);
+ const noise=audio.createBufferSource(),filter=audio.createBiquadFilter(),ng=audio.createGain();noise.buffer=buffer;filter.type='bandpass';filter.frequency.setValueAtTime(2800,t);filter.frequency.exponentialRampToValueAtTime(180,t+.22);filter.Q.value=.65;ng.gain.setValueAtTime(.10+power*.05,t);ng.gain.exponentialRampToValueAtTime(.0001,t+.24);noise.connect(filter);filter.connect(ng);ng.connect(audio.destination);noise.start(t);noise.stop(t+.25);
+ const o=audio.createOscillator(),g=audio.createGain();o.type='triangle';o.frequency.setValueAtTime(190,t);o.frequency.exponentialRampToValueAtTime(42,t+.15);g.gain.setValueAtTime(.065,t);g.gain.exponentialRampToValueAtTime(.0001,t+.18);o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.2);}
+
 function view(){if(mode!=='camera'||!video.videoWidth)return {x:0,y:0,w:W,h:H};const s=Math.min(W/video.videoWidth,H/video.videoHeight),w=video.videoWidth*s,h=video.videoHeight*s;return {x:(W-w)/2,y:(H-h)/2,w,h}}
 function mapPoint(p){const v=view();return {x:v.x+(1-p.x)*v.w,y:v.y+p.y*v.h}}
 function clearEnergy(){engine.reset();sample={valid:false};snapshot=engine.result(false);shots=[];held=false;$('#demo-hold').classList.remove('held');lastResult=-Infinity;if(typeof demoLast!=='undefined')demoLast=performance.now();}
@@ -17,7 +22,7 @@ async function startCamera(){stop();const token=++generation;activeToken=token;s
   modelPromise??=import('./tracker.js');const {createTracker}=await modelPromise;ownedTracker=await createTracker((points,timestamp)=>{if(token!==generation||mode!=='camera')return;sample=classifyPose(points);lastResult=timestamp},err=>{if(token===generation)showError(err)});if(token!==generation){ownedTracker?.close();return}tracker=ownedTracker;clearEnergy();lastInfer=0;setMode('camera');
  }catch(err){if(token!==generation){ownedStream?.getTracks().forEach(t=>t.stop());ownedTracker?.close();return}showError(err)}
 }
-let demoLast=performance.now();function triggerShot(state){const radius=Math.min(W,H)*(.035+state.charge*.14);shots.push({x:orb.x,y:orb.y,r:radius,power:state.charge,age:0});shotSound(state.charge);engine.finishShot();}
+let demoLast=performance.now();function triggerShot(state){const radius=Math.min(W,H)*(.035+state.charge*.14);shots.push({x:orb.x,y:orb.y,r:radius,power:state.charge,born:performance.now()});shotSound(state.charge);engine.finishShot();}
 function advanceDemo(now){let remaining=Math.max(0,(now-demoLast)/1000);demoLast=now;const s={valid:true,raised:held,lowered:!held,anchor:{x:.5,y:.3}};while(remaining>.00001){snapshot=engine.update(s,Math.min(remaining,.05));remaining-=.05;if(snapshot.fire)triggerShot(snapshot)}}
 function startDemo(){stop();setMode('demo');demoLast=performance.now();orb={x:W*.5,y:H*.3};ui();}
 $('#start').onclick=startCamera;$('#retry').onclick=startCamera;$('#demo').onclick=startDemo;$('#error-demo').onclick=startDemo;$('#stop').onclick=stop;$('#cancel').onclick=stop;$('#reset').onclick=clearEnergy;$('#flip').onclick=()=>{if(mode==='camera'){cameraFacing=cameraFacing==='user'?'environment':'user';startCamera()}};
@@ -32,7 +37,15 @@ function render(now){requestAnimationFrame(render);const dt=Math.min((now-last)/
  if(snapshot.charge>.005&&snapshot.phase!=='firing'){if(!reduced)gather(orb.x,orb.y,radius,snapshot.charge);drawOrb(orb.x,orb.y,radius,snapshot.charge);}
  if(mode==='camera'&&sample.valid&&sample.raised&&now-lastResult<450){for(const h of sample.hands||[]){const p=mapPoint(h);glow(p.x,p.y,8,.45)}}ui();
  }else if(mode==='welcome'){const cx=W>650?W*.69:W*.78,cy=W>650?H*.38:H*.26,r=Math.min(W,H)*.12;gather(cx,cy,r,.23);drawOrb(cx,cy,r,.3,.6)}
- for(const shot of shots){shot.age+=dt;const p=clamp(shot.age/1.3),ease=p*p,x=shot.x+(W*.5-shot.x)*p,y=shot.y-ease*H*.85,r=shot.r*(1+p*1.5);drawOrb(x,y,r,1,Math.pow(1-p,.6));ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=`rgba(160,223,255,${(1-p)*.65})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(shot.x,shot.y,shot.r+p*Math.max(W,H)*.7,0,7);ctx.stroke();if(!reduced&&p<.28){ctx.fillStyle=`rgba(185,228,255,${Math.sin(p/.28*Math.PI)*.17})`;ctx.fillRect(0,0,W,H)}ctx.restore()}shots=shots.filter(s=>s.age<1.3);
+ for(const shot of shots){const age=(now-shot.born)/1000,b=blastAt(age);if(!b.alive)continue;
+ const endY=-shot.r*2-H*.25,x=shot.x+(W*.5-shot.x)*b.progress,y=shot.y+(endY-shot.y)*b.travel,r=shot.r*(1-.35*b.progress);
+ ctx.save();ctx.globalCompositeOperation='lighter';
+ if(b.trailAlpha>0){const tail=ctx.createLinearGradient(shot.x,shot.y,x,y);tail.addColorStop(0,'#239cff00');tail.addColorStop(.35,`rgba(72,187,255,${b.trailAlpha*.45})`);tail.addColorStop(1,`rgba(225,252,255,${b.trailAlpha*.85})`);ctx.fillStyle=tail;ctx.beginPath();ctx.moveTo(shot.x-shot.r*.75,shot.y+shot.r*.2);ctx.quadraticCurveTo(x-shot.r*.4,y+shot.r*1.1,x-r*.23,y);ctx.lineTo(x+r*.23,y);ctx.quadraticCurveTo(x+shot.r*.4,y+shot.r*1.1,shot.x+shot.r*.75,shot.y+shot.r*.2);ctx.closePath();ctx.fill();
+ ctx.strokeStyle=`rgba(233,251,255,${b.trailAlpha*.8})`;ctx.lineWidth=Math.max(2,shot.r*.08);ctx.beginPath();ctx.moveTo(shot.x,shot.y);ctx.lineTo(x,y);ctx.stroke();}
+ if(b.alpha>0)drawOrb(x,y,r,1,b.alpha);
+ ctx.strokeStyle=`rgba(160,223,255,${b.shockAlpha*.72})`;ctx.lineWidth=Math.max(1,4*b.shockAlpha);ctx.beginPath();ctx.ellipse(shot.x,shot.y,shot.r+b.shock*Math.max(W,H)*.95,(shot.r+b.shock*Math.max(W,H)*.95)*.55,0,0,7);ctx.stroke();
+ if(!reduced){for(let i=0;i<18;i++){const angle=i*2.399,from=shot.r+b.shock*Math.max(W,H)*.7,to=from+45*b.shockAlpha;ctx.strokeStyle=`rgba(194,239,255,${b.shockAlpha*.55})`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(shot.x+Math.cos(angle)*from,shot.y+Math.sin(angle)*from);ctx.lineTo(shot.x+Math.cos(angle)*to,shot.y+Math.sin(angle)*to);ctx.stroke()}if(b.flash>0){ctx.fillStyle=`rgba(191,235,255,${b.flash*.13})`;ctx.fillRect(0,0,W,H)}}ctx.restore();}shots=shots.filter(s=>(now-s.born)/1000<BLAST_LIFETIME);
+
  if(gain){gain.gain.setTargetAtTime(sound&&active&&snapshot.phase!=='firing'?snapshot.charge*.05:0,audio.currentTime,.12);hum.frequency.setTargetAtTime(90+snapshot.charge*170,audio.currentTime,.1)}
 }
 setMode('welcome');requestAnimationFrame(render);

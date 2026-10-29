@@ -33,3 +33,7 @@ Cancel, exit, page hiding and page exit stop all camera tracks and close trackin
 Syntax checks passed. Synthetic-landmark and gesture-state checks passed for full charge, initial idle, confidence rejection, missing tracking, re-arming, one release, cooldown and anchor retention. The camera-free demo was tested in a real browser: charging to 100%, release animation, and return to an empty meter were observed. Pinned JS and model asset endpoints were checked.
 
 Real camera acquisition and actual human pose recognition have not been tested on an end-user device. End-to-end latency has not been measured. Demo operation verifies effects and controls, not camera recognition accuracy or device compatibility.
+
+## Fast release update
+
+The shot uses wall-clock time rather than capped render deltas. It travels offscreen in 0.24 seconds, with a tapered beam trail, a 0.34-second shockwave and a short noise/low-frequency audio impact. Total effect lifetime is 0.44 seconds; reduced-motion mode omits streaks and the full-screen flash. Release confirmation is 75 ms and the cooldown is 0.7 seconds. Lost-tracking disarm and re-arming requirements are retained.

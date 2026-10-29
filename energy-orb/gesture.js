@@ -13,7 +13,7 @@ export class EnergyGesture {
  if(!sample?.valid){this.missing+=dt;this.up=this.down=0;if(this.missing>.8){this.armed=false;this.charge=Math.max(0,this.charge-dt*.24);if(this.charge===0)this.phase='waiting'}return this.result(false)}
  this.missing=0;if(sample.anchor&&(sample.raised||this.charge===0))this.anchor={...sample.anchor};
  if(sample.raised){this.up+=dt;this.down=0;if(this.up>=.2){this.armed=true;this.charge=clamp(this.charge+dt*.27);this.phase=this.charge>=.98?'ready':'charging'}}
- else if(sample.lowered){this.up=0;this.down+=dt;if(this.down>=.16&&this.charge>=.12&&this.armed){fire=true;this.phase='firing';this.cooldown=2.1;this.down=0;}}
+ else if(sample.lowered){this.up=0;this.down+=dt;if(this.down>=.075&&this.charge>=.12&&this.armed){fire=true;this.phase='firing';this.cooldown=.7;this.down=0;}}
  else{this.up=this.down=0;}
  return this.result(fire);
  }
