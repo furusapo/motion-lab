@@ -1,6 +1,6 @@
 # 風の旅路 / WAYFARER
 
-Original third-person 3D adventure vignette. A small traveler runs from an open meadow into a forest and ancient ruins. No real-world location or existing game characters/assets are used.
+Original third-person 3D adventure vignette. A smooth, round original woodland animal with an oversized head and tiny paws runs from an open meadow into a forest and ancient ruins. No real-world location or existing game characters/assets are used.
 
 ## Play
 
@@ -21,7 +21,7 @@ This is an authored path-based prototype, not a free-roaming or combat game. Sid
 ## Source
 
 - `app.js`: scene, controls, follow camera, journey state and optional sound.
-- `hero.js`: original articulated traveler and run/jump poses.
+- `hero.js`: original smooth peach-coloured animal with articulated paws, blinking eyes, soft ear/tail motion and run/jump poses.
 - `world.js`: seeded terrain, grass, trees, clouds and ruins.
 - `journey.js`: route, terrain and camera math.
 - `three.module.js`: Three.js r170, MIT; see THREE-LICENSE.txt.
@@ -31,3 +31,9 @@ This is an authored path-based prototype, not a free-roaming or combat game. Sid
 JavaScript syntax checked. Three.js constructed the complete world and protagonist in Node; all mesh position values were finite and animation updates executed. Camera projections were checked at 0.5 m intervals across the course and at three lateral positions: 2,523 framing checks passed in a portrait viewport. Offline projections of the actual scene geometry were inspected for the three biomes.
 
 The available cloud browser has WebGL disabled. Its unsupported-browser screen was verified. Actual WebGL rendering, touch interactions and frame rate on an end-user device have not been visually verified. Offline projections and math checks do not establish a successful browser GPU render.
+
+## Round animal update
+
+The protagonist uses smooth 32×24 sphere surfaces, a large rounded head and small body, short paws, mint ear interiors, peach fur, a cream muzzle and tail tip, and a tiny acorn pack. No existing character model or image is used. The chase camera is pulled back and lowered for the smaller character. The face-view button pauses travel and moves the camera around to the front; starting again restores the chase view.
+
+Round-animal validation: 5,046 portrait framing cases (including jump height), 200 finite animation-pose updates, and no box geometry or flat-shaded character surfaces. Offline front and chase projections inspected. Actual WebGL playback remains unverified in the available GPU-disabled browser.
