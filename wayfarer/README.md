@@ -52,3 +52,6 @@ Validation: quest rule checks and full headless Three.js collection/shop/friends
 
 ## Friend care update
 Pet yourself before recruitment or pet your companion afterward. Feed uses one acorn, only after recruitment; calling is free. Actions pause travel and turn the camera to show faces. The companion approaches beside the hero, reacts, then returns to following when travel resumes. Petting narrows eyes and wags the tail; feeding shows a held acorn and chewing; calling produces a wave. Reusable heart particles respect reduced motion. Repeated care actions are blocked until the current reaction finishes; reset/seek/resume cancel reactions. Progress remains session-only.
+
+## Pastel colors
+The traveler starts sakura pink; the companion starts sky blue. The color disclosure offers pink, blue, peach and mint independently for both characters. Fur changes immediately without replacing meshes; cream details and accessories retain their colors. Choices persist through in-page restart, not page reload. Native selects keep keyboard navigation independent from game controls.

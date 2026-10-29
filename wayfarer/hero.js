@@ -52,5 +52,6 @@ export function createHero(colors={}){
   if(mood.joy&&!mood.eating&&!mood.pet&&!reduced){body.position.y+=Math.abs(Math.sin(time*12))*.09;paws[0].rotation.x=paws[1].rotation.x=-.8;ears[0].rotation.z-=.1;ears[1].rotation.z+=.1;}
 
  }
- return {root,pose,equip};
+ function setColor(color){if(!Number.isInteger(color)||color<0||color>0xffffff)return false;fur.color.setHex(color);return true;}
+ return {root,pose,equip,setColor};
 }

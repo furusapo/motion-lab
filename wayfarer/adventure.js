@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {pathX,terrain,direction} from './journey.js';
-import {createHero} from './hero.js?v=friend-care-1';
+import {createHero} from './hero.js?v=pastel-1';
 import {ForestQuest,nutSpots} from './quest.js?v=friend-care-1';
 export function createAdventure(scene,hero){
  const quest=new ForestQuest(),group=new T.Group();scene.add(group);
@@ -47,5 +47,5 @@ export function createAdventure(scene,hero){
  }
  function interact(){if(near==='friend'){if(quest.befriend()){joy=2;return '木の実、ありがとう！ なかまになったよ。'}return '木の実が3こ必要。草原に戻って拾ってこよう。';}return '';}
  function buy(item){if(!quest.buy(item))return false;hero.equip(quest.hat,quest.pouch);joy=1.5;return true;}
- return {quest,update,interact,buy,reset,careAction,cancelCare,get caring(){return !!care;},get careType(){return care;},get near(){return near;}};
+ return {quest,update,interact,buy,reset,careAction,cancelCare,setFriendColor:friend.setColor,get caring(){return !!care;},get careType(){return care;},get near(){return near;}};
 }
