@@ -1,7 +1,7 @@
 import {blastAt,BLAST_LIFETIME} from './blast.js?v=fast-1';
-import {EnergyGesture,classifyPose,clamp} from './gesture.js?v=fast-1';
+import {EnergyGesture,classifyPose,clamp} from './gesture.js?v=slow-grow-1';
 const $=s=>document.querySelector(s),canvas=$('#effects'),ctx=canvas.getContext('2d'),video=$('#camera'),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio,1.5),mode='welcome',stream=null,tracker=null,generation=0,sample={valid:false},lastResult=-Infinity,lastInfer=0,modelPromise=null,cameraFacing='user',held=false,engine=new EnergyGesture(),snapshot=engine.result(false),last=performance.now(),time=0,shots=[],orb={x:W*.68,y:H*.32},audio=null,gain=null,hum=null,sound=false,activeToken=0;const rand=(a,b)=>a+Math.random()*(b-a);
-const particles=Array.from({length:innerWidth<650?1000:1800},()=>({a:rand(0,Math.PI*2),r:rand(100,Math.max(W,H)*.72),s:Math.random(),k:rand(.7,1.7),phase:rand(0,6.283),z:rand(.35,2.5)}));
+const particles=Array.from({length:innerWidth<650?1600:2800},()=>({a:rand(0,Math.PI*2),r:rand(100,Math.max(W,H)*.72),s:Math.random(),k:rand(.7,1.7),phase:rand(0,6.283),z:rand(.35,2.5)}));
 function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio,1.5);canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}resize();addEventListener('resize',resize);
 function audioInit(){if(audio)return;audio=new (window.AudioContext||window.webkitAudioContext)();gain=audio.createGain();gain.gain.value=0;gain.connect(audio.destination);hum=audio.createOscillator();hum.type='sine';hum.frequency.value=95;hum.connect(gain);hum.start()}
 $('#sound').onclick=()=>{sound=!sound;try{if(sound){audioInit();audio.resume()}else if(gain)gain.gain.setTargetAtTime(0,audio.currentTime,.1)}catch{sound=false}$('#sound').textContent=sound?'音 ON':'音 OFF';$('#sound').setAttribute('aria-pressed',sound)};
@@ -23,7 +23,7 @@ async function startCamera(){stop();const token=++generation;activeToken=token;s
   modelPromise??=import('./tracker.js');const {createTracker}=await modelPromise;ownedTracker=await createTracker((points,timestamp)=>{if(token!==generation||mode!=='camera')return;sample=classifyPose(points);lastResult=timestamp},err=>{if(token===generation)showError(err)});if(token!==generation){ownedTracker?.close();return}tracker=ownedTracker;clearEnergy();lastInfer=0;setMode('camera');
  }catch(err){if(token!==generation){ownedStream?.getTracks().forEach(t=>t.stop());ownedTracker?.close();return}showError(err)}
 }
-let demoLast=performance.now();function triggerShot(state){const radius=Math.min(W,H)*(.035+state.charge*.14);shots.push({x:orb.x,y:orb.y,r:radius,power:state.charge,born:performance.now()});shotSound(state.charge);engine.finishShot();}
+let demoLast=performance.now();function triggerShot(state){const radius=Math.min(W,H)*(.012+state.charge*.163);shots.push({x:orb.x,y:orb.y,r:radius,power:state.charge,born:performance.now()});shotSound(state.charge);engine.finishShot();}
 function advanceDemo(now){let remaining=Math.max(0,(now-demoLast)/1000);demoLast=now;const s={valid:true,raised:held,lowered:!held,anchor:{x:.5,y:.3}};while(remaining>.00001){snapshot=engine.update(s,Math.min(remaining,.05));remaining-=.05;if(snapshot.fire)triggerShot(snapshot)}}
 function startDemo(){stop();setMode('demo');demoLast=performance.now();orb={x:W*.5,y:H*.3};ui();}
 $('#start').onclick=startCamera;$('#retry').onclick=startCamera;$('#demo').onclick=startDemo;$('#error-demo').onclick=startDemo;$('#stop').onclick=stop;$('#cancel').onclick=stop;$('#reset').onclick=clearEnergy;$('#flip').onclick=()=>{if(mode==='camera'){cameraFacing=cameraFacing==='user'?'environment':'user';startCamera()}};
@@ -31,7 +31,7 @@ function setHeld(value){if(mode!=='demo')return;advanceDemo(performance.now());h
 function glow(x,y,r,alpha=1,color='blue'){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=alpha;const g=ctx.createRadialGradient(x-r*.19,y-r*.21,0,x,y,r*1.75);g.addColorStop(0,'#ffffff');g.addColorStop(.15,color==='gold'?'#fff4ba':'#e4faff');g.addColorStop(.35,'#90dfffcc');g.addColorStop(.55,'#299aff88');g.addColorStop(.8,'#1580e933');g.addColorStop(1,'#0b5fc500');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*1.75,0,Math.PI*2);ctx.fill();ctx.restore();}
 // Match GRPS Particle Logo Reveal: fine filled points, restrained sparse halos,
 // randomized positions and eased assembly, without bright sprite beads or orbit outlines.
-const orbBaseCount=innerWidth<650?2600:4600;
+const orbBaseCount=innerWidth<650?3500:6200;
 const orbDust=Array.from({length:orbBaseCount*4},(_,i)=>{
  const z=rand(-1,1),a=rand(0,Math.PI*2),rad=Math.sqrt(1-z*z),depth=Math.cbrt(Math.random());
  return {x:Math.cos(a)*rad*depth,y:z*depth,z:Math.sin(a)*rad*depth,size:rand(.7,1.7),phase:rand(0,6.283),halo:i%13===0};
@@ -44,7 +44,7 @@ function drawOrb(x,y,r,power,alpha=1){
  ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle='#8ccfff';
  // Keep projected light coverage constant as radius grows. Add points first,
  // then gently scale their footprint after the pool limit, without extra opacity.
- const baseRadius=Math.min(W,H)*.035,areaScale=Math.max(1,(r/baseRadius)**2);
+ const baseRadius=Math.min(W,H)*.035,areaScale=Math.max(.04,(r/baseRadius)**2);
  const pointCount=Math.min(orbDust.length,Math.round(orbBaseCount*areaScale));
  const pointScale=Math.sqrt(areaScale*orbBaseCount/pointCount);
  const angle=reduced?0:time*.13,c=Math.cos(angle),s=Math.sin(angle);
@@ -74,7 +74,7 @@ function gather(x,y,r,power){
 function ui(){const active=mode==='camera'||mode==='demo';if(!active)return;const p=snapshot.charge;$('#percent').textContent=Math.round(p*100)+'%';$('#fill').style.width=p*100+'%';let step='01 / 集める',title=mode==='demo'?'長押しして、光を集めよう。':'両手を、頭より上に。',guide=mode==='demo'?'下のボタンを押し続けて、離すと発射。':'少し離れて、頭・肩・両手を画面に入れてください。';if(snapshot.phase==='charging'){step='02 / ためる';title='光が、集まってきた。';guide=mode==='demo'?'押し続けると大きくなります。':'両手を上げたまま、もう少し。'}if(snapshot.phase==='ready'){step='03 / 放つ';title=mode==='demo'?'ボタンを離して、放とう。':'両手を下ろして、放とう。';guide=mode==='demo'?'準備完了！':'両手を肩の高さまで下ろしてください。'}if(snapshot.phase==='firing'){step='RELEASE';title='解き放て。';guide='もう一度、光を集められます。'}if(mode==='camera'&&snapshot.trackingLost){guide='頭・肩・両手が映るように、少し離れてください。';$('#status').textContent='両手を見失っています · 発射はしません'}else if(mode==='camera')$('#status').textContent=sample.valid?'姿勢を認識中':'頭・肩・両手を探しています';else $('#status').textContent='デモモード · カメラは使用していません';$('#step').textContent=step;$('#instruction').textContent=title;$('#guidance').textContent=guide;}
 function render(now){requestAnimationFrame(render);const dt=Math.min((now-last)/1000,.08);last=now;if(document.hidden)return;time+=dt;ctx.clearRect(0,0,W,H);if(mode!=='camera'){const bg=ctx.createRadialGradient(W*.6,H*.3,5,W*.5,H*.4,Math.max(W,H)*.8);bg.addColorStop(0,'#102f51');bg.addColorStop(.45,'#07172c');bg.addColorStop(1,'#030a15');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.fillStyle='#c3e9ff';for(let i=0;i<70;i++){ctx.globalAlpha=.15+(i%5)*.06;ctx.beginPath();ctx.arc((i*137.51)%W,(i*83.73)%H,i%4===0?1.1:.6,0,7);ctx.fill()}ctx.globalAlpha=1;}
  if(mode==='camera'&&tracker&&now-lastInfer>66){lastInfer=now;const token=generation;tracker.process(video,now).catch(err=>{if(token===generation)showError(err)})}
- const active=mode==='camera'||mode==='demo';if(active){const s=mode==='demo'?{valid:true,raised:held,lowered:!held,anchor:{x:.5,y:.3}}:now-lastResult<450?sample:{valid:false};if(mode==='demo')advanceDemo(now);else snapshot=engine.update(s,dt);const target=mode==='demo'?{x:W*.5,y:H*.3}:mapPoint(snapshot.anchor);const radius=Math.min(W,H)*(.035+snapshot.charge*.14);target.y=clamp(target.y,24,H*.62);target.x=clamp(target.x,radius+8,W-radius-8);orb.x+=(target.x-orb.x)*(1-Math.exp(-dt*12));orb.y+=(target.y-orb.y)*(1-Math.exp(-dt*12));if(mode==='camera'&&snapshot.fire)triggerShot(snapshot);
+ const active=mode==='camera'||mode==='demo';if(active){const s=mode==='demo'?{valid:true,raised:held,lowered:!held,anchor:{x:.5,y:.3}}:now-lastResult<450?sample:{valid:false};if(mode==='demo')advanceDemo(now);else snapshot=engine.update(s,dt);const target=mode==='demo'?{x:W*.5,y:H*.3}:mapPoint(snapshot.anchor);const radius=Math.min(W,H)*(.012+snapshot.charge*.163);target.y=clamp(target.y,24,H*.62);target.x=clamp(target.x,radius+8,W-radius-8);orb.x+=(target.x-orb.x)*(1-Math.exp(-dt*12));orb.y+=(target.y-orb.y)*(1-Math.exp(-dt*12));if(mode==='camera'&&snapshot.fire)triggerShot(snapshot);
  if(snapshot.charge>.005&&snapshot.phase!=='firing'){if(!reduced)gather(orb.x,orb.y,radius,snapshot.charge);drawOrb(orb.x,orb.y,radius,snapshot.charge);}
  if(mode==='camera'&&sample.valid&&sample.raised&&now-lastResult<450){for(const h of sample.hands||[]){const p=mapPoint(h);glow(p.x,p.y,8,.45)}}ui();
  }else if(mode==='welcome'){const cx=W>650?W*.69:W*.78,cy=W>650?H*.38:H*.26,r=Math.min(W,H)*.12;gather(cx,cy,r,.23);drawOrb(cx,cy,r,.3,.6)}
