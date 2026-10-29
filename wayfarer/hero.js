@@ -25,11 +25,13 @@ export function createHero(colors={}){
  const ribbon=new T.Group();ribbon.position.set(.16,.7,-.09);body.add(ribbon);puff(ribbon,teal,0,-.12,-.055,.055,.18,.032);
  const bag=new T.Group();bag.position.set(0,.47,-.244);body.add(bag);puff(bag,ochre,0,0,0,.151,.18,.075);puff(bag,teal,0,.125,-.005,.156,.06,.08);puff(bag,cream,0,.025,-.076,.024,.027,.012);
  const tail=new T.Group();tail.position.set(0,.28,-.175);body.add(tail);puff(tail,fur,0,.025,-.1,.115,.12,.18);puff(tail,cream,0,.03,-.235,.092,.095,.10);
+ const snack=new T.Group();body.add(snack);snack.visible=false;snack.position.set(0,.78,.32);puff(snack,ochre,0,0,0,.075,.09,.075);puff(snack,ink,0,.065,0,.08,.03,.08);
  const hat=new T.Group();head.add(hat);hat.visible=false;
  puff(hat,teal,0,.47,0,.37,.035,.3);puff(hat,inner,0,.55,0,.245,.14,.22);puff(hat,cream,.17,.59,.16,.035,.035,.035);
  const pouch=new T.Group();pouch.position.set(.29,.38,-.12);body.add(pouch);pouch.visible=false;puff(pouch,ochre,0,0,0,.12,.14,.08);puff(pouch,cream,0,.07,-.07,.1,.025,.02);
  function equip(hasHat,hasPouch){hat.visible=hasHat;pouch.visible=hasPouch;}
  function pose(distance,time,speed,jumping,turn=0,reduced=false,mood={}){
+  snack.visible=!!mood.eating;for(let i=0;i<2;i++)paws[i].position.x=(i===0?-1:1)*.245;
   const run=Math.min(speed/5,1),phase=distance*2.1,bounce=Math.abs(Math.sin(phase));
   body.position.y=reduced?0:bounce*.047*run+Math.sin(time*2)*.009*(1-run);
   body.rotation.set(.035*run,0,reduced?0:Math.sin(phase)*.045*run-turn*.25);
@@ -44,7 +46,10 @@ export function createHero(colors={}){
   if(sit){body.position.y-=.12;feet[0].rotation.x=feet[1].rotation.x=-.65;head.rotation.x=asleep?.22:.07;}
   if(asleep)for(const eye of eyes)eye.scale.y=.008;
   if(!reduced&&run<.15){ears[0].rotation.z+=Math.pow(Math.max(0,Math.sin(time*2.6)),12)*.23;head.rotation.y+=Math.sin(time*.7)*.08;}
-  if(mood.joy&&!reduced){body.position.y+=Math.abs(Math.sin(time*12))*.09;paws[0].rotation.x=paws[1].rotation.x=-.8;ears[0].rotation.z-=.1;ears[1].rotation.z+=.1;}
+  if(mood.pet){head.rotation.z=reduced?.06:Math.sin(time*3)*.12;head.rotation.x=-.07;for(const eye of eyes)eye.scale.y=.012;tail.rotation.y=reduced?0:Math.sin(time*10)*.3;}
+  if(mood.eating){const chew=reduced?0:Math.sin(time*14);head.rotation.x=.08+chew*.035;for(const eye of eyes)eye.scale.y=.022;for(let i=0;i<2;i++){paws[i].position.x=(i===0?-1:1)*.12;paws[i].rotation.x=-1.8;paws[i].rotation.z=(i===0?-1:1)*.25;}snack.position.y=.78+chew*.009;snack.scale.setScalar(.9+chew*.025);}
+  if(mood.called&&!reduced){paws[1].rotation.x=-2.2;paws[1].rotation.z=Math.sin(time*9)*.3;}
+  if(mood.joy&&!mood.eating&&!mood.pet&&!reduced){body.position.y+=Math.abs(Math.sin(time*12))*.09;paws[0].rotation.x=paws[1].rotation.x=-.8;ears[0].rotation.z-=.1;ears[1].rotation.z+=.1;}
 
  }
  return {root,pose,equip};

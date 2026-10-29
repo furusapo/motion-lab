@@ -49,3 +49,6 @@ Round-animal validation: 5,046 portrait framing cases (including jump height), 2
 - Walk speed lowered to 4.6; dash 8.5; slow walk 2.
 
 Validation: quest rule checks and full headless Three.js collection/shop/friendship/follow/reset simulation. Browser WebGL remains unavailable; end-user GPU rendering and touch play are unverified.
+
+## Friend care update
+Pet yourself before recruitment or pet your companion afterward. Feed uses one acorn, only after recruitment; calling is free. Actions pause travel and turn the camera to show faces. The companion approaches beside the hero, reacts, then returns to following when travel resumes. Petting narrows eyes and wags the tail; feeding shows a held acorn and chewing; calling produces a wave. Reusable heart particles respect reduced motion. Repeated care actions are blocked until the current reaction finishes; reset/seek/resume cancel reactions. Progress remains session-only.
