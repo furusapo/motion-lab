@@ -1,6 +1,7 @@
 import {blastAt,BLAST_LIFETIME} from './blast.js?v=fast-1';
 import {EnergyGesture,classifyPose,clamp} from './gesture.js?v=fast-1';
-const $=s=>document.querySelector(s),canvas=$('#effects'),ctx=canvas.getContext('2d'),video=$('#camera'),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio,1.5),mode='welcome',stream=null,tracker=null,generation=0,sample={valid:false},lastResult=-Infinity,lastInfer=0,modelPromise=null,cameraFacing='user',held=false,engine=new EnergyGesture(),snapshot=engine.result(false),last=performance.now(),time=0,shots=[],orb={x:W*.68,y:H*.32},audio=null,gain=null,hum=null,sound=false,activeToken=0;const particles=Array.from({length:360},(_,i)=>({a:i*2.399963,r:90+(i*71)%440,s:(i*.618033)%1,k:.6+(i%8)/8}));
+const $=s=>document.querySelector(s),canvas=$('#effects'),ctx=canvas.getContext('2d'),video=$('#camera'),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let W=innerWidth,H=innerHeight,dpr=Math.min(devicePixelRatio,1.5),mode='welcome',stream=null,tracker=null,generation=0,sample={valid:false},lastResult=-Infinity,lastInfer=0,modelPromise=null,cameraFacing='user',held=false,engine=new EnergyGesture(),snapshot=engine.result(false),last=performance.now(),time=0,shots=[],orb={x:W*.68,y:H*.32},audio=null,gain=null,hum=null,sound=false,activeToken=0;const rand=(a,b)=>a+Math.random()*(b-a);
+const particles=Array.from({length:innerWidth<650?1000:1800},()=>({a:rand(0,Math.PI*2),r:rand(100,Math.max(W,H)*.72),s:Math.random(),k:rand(.7,1.7),phase:rand(0,6.283),z:rand(.35,2.5)}));
 function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio,1.5);canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}resize();addEventListener('resize',resize);
 function audioInit(){if(audio)return;audio=new (window.AudioContext||window.webkitAudioContext)();gain=audio.createGain();gain.gain.value=0;gain.connect(audio.destination);hum=audio.createOscillator();hum.type='sine';hum.frequency.value=95;hum.connect(gain);hum.start()}
 $('#sound').onclick=()=>{sound=!sound;try{if(sound){audioInit();audio.resume()}else if(gain)gain.gain.setTargetAtTime(0,audio.currentTime,.1)}catch{sound=false}$('#sound').textContent=sound?'音 ON':'音 OFF';$('#sound').setAttribute('aria-pressed',sound)};
@@ -28,14 +29,41 @@ function startDemo(){stop();setMode('demo');demoLast=performance.now();orb={x:W*
 $('#start').onclick=startCamera;$('#retry').onclick=startCamera;$('#demo').onclick=startDemo;$('#error-demo').onclick=startDemo;$('#stop').onclick=stop;$('#cancel').onclick=stop;$('#reset').onclick=clearEnergy;$('#flip').onclick=()=>{if(mode==='camera'){cameraFacing=cameraFacing==='user'?'environment':'user';startCamera()}};
 function setHeld(value){if(mode!=='demo')return;advanceDemo(performance.now());held=value;$('#demo-hold').classList.toggle('held',value)}const hold=$('#demo-hold');hold.addEventListener('pointerdown',e=>{e.preventDefault();hold.setPointerCapture(e.pointerId);setHeld(true)});for(const event of ['pointerup','pointercancel','lostpointercapture'])hold.addEventListener(event,()=>setHeld(false));addEventListener('keydown',e=>{if(mode==='demo'&&e.code==='Space'){e.preventDefault();setHeld(true)}});addEventListener('keyup',e=>{if(e.code==='Space')setHeld(false)});addEventListener('blur',()=>setHeld(false));document.addEventListener('visibilitychange',()=>{if(document.hidden){if(mode==='camera'||mode==='loading')stop();else setHeld(false);if(gain)gain.gain.setTargetAtTime(0,audio.currentTime,.1)}});addEventListener('pagehide',stop);
 function glow(x,y,r,alpha=1,color='blue'){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=alpha;const g=ctx.createRadialGradient(x-r*.19,y-r*.21,0,x,y,r*1.75);g.addColorStop(0,'#ffffff');g.addColorStop(.15,color==='gold'?'#fff4ba':'#e4faff');g.addColorStop(.35,'#90dfffcc');g.addColorStop(.55,'#299aff88');g.addColorStop(.8,'#1580e933');g.addColorStop(1,'#0b5fc500');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*1.75,0,Math.PI*2);ctx.fill();ctx.restore();}
-// Soft point sprites keep the effect particulate instead of drawing orbit rings.
-function makeSpark(core,halo){const c=document.createElement('canvas');c.width=c.height=32;const g=c.getContext('2d'),r=g.createRadialGradient(16,16,0,16,16,16);r.addColorStop(0,core);r.addColorStop(.13,core);r.addColorStop(.35,halo);r.addColorStop(1,'rgba(60,160,255,0)');g.fillStyle=r;g.fillRect(0,0,32,32);return c;}
-const sparks=[makeSpark('#f3fdff','#98deff99'),makeSpark('#9edaff','#429fff66')];
-const orbDust=Array.from({length:520},(_,i)=>{const h=(i*.754877666)%1,v=(i*.569840291)%1,z=1-2*v,a=i*2.399963,rad=Math.sqrt(1-z*z),depth=i%3===0?1:Math.cbrt(.08+h*.92);return {x:Math.cos(a)*rad*depth,y:z*depth,z:Math.sin(a)*rad*depth,k:.5+((i*.438579)%1),phase:i*1.137};});
-function drawOrb(x,y,r,power,alpha=1){ctx.save();ctx.globalCompositeOperation='lighter';glow(x,y,r*.62,alpha*(.12+power*.13));const angle=reduced?0:time*(.34+power*.18),c=Math.cos(angle),s=Math.sin(angle),tilt=reduced?0:time*.17,ct=Math.cos(tilt),st=Math.sin(tilt);
- for(const p of orbDust){const xx=p.x*c+p.z*s,zz=-p.x*s+p.z*c,yy=p.y*ct-zz*st,depth=p.y*st+zz*ct,perspective=1/(1-depth*.16),pulse=reduced?1:.78+Math.sin(time*2+p.phase)*.22,px=x+xx*r*perspective,py=y+yy*r*perspective,size=Math.max(1.4,r*(.027+p.k*.019))*(.8+depth*.25);ctx.globalAlpha=alpha*(.22+(depth+1)*.29)*pulse;ctx.drawImage(sparks[p.k>1?0:1],px-size,py-size,size*2,size*2);if(depth>.15){ctx.globalAlpha=alpha*(.45+depth*.35);ctx.fillStyle='#e8faff';ctx.beginPath();ctx.arc(px,py,Math.max(.45,size*.13),0,Math.PI*2);ctx.fill();}}
- ctx.restore();}
-function gather(x,y,r,power){ctx.save();ctx.globalCompositeOperation='lighter';for(const p of particles){const u=(time*(.17+power*.17)+p.s)%1,dist=r*.12+Math.pow(1-u,1.35)*(p.r+r),angle=p.a+(1-u)*(1.2+power*.7),px=x+Math.cos(angle)*dist,py=y+Math.sin(angle)*dist*.78,fade=Math.sin(Math.PI*u);const size=(2.2+p.k*1.9)*(.65+u*.55);ctx.globalAlpha=(.28+power*.65)*fade;ctx.drawImage(sparks[p.k>1?0:1],px-size,py-size,size*2,size*2);ctx.globalAlpha=(.4+power*.5)*fade;ctx.fillStyle='#ddf6ff';ctx.beginPath();ctx.arc(px,py,.45+p.k*.32,0,Math.PI*2);ctx.fill();}ctx.restore();}
+// Match GRPS Particle Logo Reveal: fine filled points, restrained sparse halos,
+// randomized positions and eased assembly, without bright sprite beads or orbit outlines.
+const orbDust=Array.from({length:innerWidth<650?2600:4600},(_,i)=>{
+ const z=rand(-1,1),a=rand(0,Math.PI*2),rad=Math.sqrt(1-z*z),depth=Math.cbrt(Math.random());
+ return {x:Math.cos(a)*rad*depth,y:z*depth,z:Math.sin(a)*rad*depth,size:rand(.7,1.7),phase:rand(0,6.283),halo:i%13===0};
+});
+function finePoint(x,y,size,alpha,halo=false){
+ ctx.globalAlpha=alpha;ctx.beginPath();ctx.arc(x,y,size,0,6.283);ctx.fill();
+ if(halo){ctx.globalAlpha=alpha*.11;ctx.beginPath();ctx.arc(x,y,size*3.3,0,6.283);ctx.fill();}
+}
+function drawOrb(x,y,r,power,alpha=1){
+ ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle='#8ccfff';
+ const angle=reduced?0:time*.13,c=Math.cos(angle),s=Math.sin(angle);
+ for(const p of orbDust){
+  const xx=p.x*c+p.z*s,depth=-p.x*s+p.z*c,perspective=1/(1-depth*.12);
+  const drift=reduced?0:Math.sin(time*1.7+p.phase)*.012;
+  const px=x+(xx+drift)*r*perspective,py=y+(p.y+drift*.6)*r*perspective;
+  const brightness=.38+(depth+1)*.24;
+  finePoint(px,py,p.size*.76*(.85+depth*.15),alpha*brightness,p.halo);
+ }
+ ctx.restore();
+}
+function gather(x,y,r,power){
+ ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle='#68b5ff';
+ for(const p of particles){
+  const u=(time*(.12+power*.09)+p.s)%1,k=1-Math.pow(1-u,3);
+  const orbital=(1-k)*Math.sin(time*1.7+p.phase)*65*p.z;
+  const distance=r*.65+(1-k)*p.r;
+  const px=x+Math.cos(p.a)*distance+Math.cos(p.phase+time*1.8)*orbital;
+  const py=y+Math.sin(p.a)*distance*.83+Math.sin(p.phase+time*1.8)*orbital*.5;
+  const fade=Math.min(1,u*8,(1-u)*8);
+  finePoint(px,py,p.k*(.76+(1-k)*.39),(.4+power*.45)*fade,Math.floor(p.phase*100)%13===0);
+ }
+ ctx.restore();
+}
 
 function ui(){const active=mode==='camera'||mode==='demo';if(!active)return;const p=snapshot.charge;$('#percent').textContent=Math.round(p*100)+'%';$('#fill').style.width=p*100+'%';let step='01 / 集める',title=mode==='demo'?'長押しして、光を集めよう。':'両手を、頭より上に。',guide=mode==='demo'?'下のボタンを押し続けて、離すと発射。':'少し離れて、頭・肩・両手を画面に入れてください。';if(snapshot.phase==='charging'){step='02 / ためる';title='光が、集まってきた。';guide=mode==='demo'?'押し続けると大きくなります。':'両手を上げたまま、もう少し。'}if(snapshot.phase==='ready'){step='03 / 放つ';title=mode==='demo'?'ボタンを離して、放とう。':'両手を下ろして、放とう。';guide=mode==='demo'?'準備完了！':'両手を肩の高さまで下ろしてください。'}if(snapshot.phase==='firing'){step='RELEASE';title='解き放て。';guide='もう一度、光を集められます。'}if(mode==='camera'&&snapshot.trackingLost){guide='頭・肩・両手が映るように、少し離れてください。';$('#status').textContent='両手を見失っています · 発射はしません'}else if(mode==='camera')$('#status').textContent=sample.valid?'姿勢を認識中':'頭・肩・両手を探しています';else $('#status').textContent='デモモード · カメラは使用していません';$('#step').textContent=step;$('#instruction').textContent=title;$('#guidance').textContent=guide;}
 function render(now){requestAnimationFrame(render);const dt=Math.min((now-last)/1000,.08);last=now;if(document.hidden)return;time+=dt;ctx.clearRect(0,0,W,H);if(mode!=='camera'){const bg=ctx.createRadialGradient(W*.6,H*.3,5,W*.5,H*.4,Math.max(W,H)*.8);bg.addColorStop(0,'#102f51');bg.addColorStop(.45,'#07172c');bg.addColorStop(1,'#030a15');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.fillStyle='#c3e9ff';for(let i=0;i<70;i++){ctx.globalAlpha=.15+(i%5)*.06;ctx.beginPath();ctx.arc((i*137.51)%W,(i*83.73)%H,i%4===0?1.1:.6,0,7);ctx.fill()}ctx.globalAlpha=1;}

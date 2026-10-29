@@ -41,3 +41,6 @@ The shot uses wall-clock time rather than capped render deltas. It travels offsc
 ## Particle orb update
 
 Incoming light is represented by soft round particles rather than line segments. The rotating orbit outlines and solid central glow are replaced by 520 softly glowing particles in a rotating three-dimensional spherical volume. Depth affects their size and brightness; the center retains a restrained glow so the individual particles remain visible. Fast launch timing is unchanged.
+
+## GRPS particle style
+Fine filled points follow the GRPS logo reveal drawing treatment: 0.7–1.7px source sizes, sparse 11% halos, additive blending and eased assembly. The orb uses a randomized 3D volume of 2,600 mobile / 4,600 desktop points, with no glowing bead sprites or ordered orbit rings. Fast blast timing is unchanged.
