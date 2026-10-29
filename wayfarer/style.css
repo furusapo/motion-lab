@@ -2,3 +2,4 @@
 [hidden]{display:none!important}
 
 #look[aria-pressed=true]{background:#f7e4bb;color:#345a4a}
+body:has(#look[aria-pressed=true]) #intro{opacity:0;pointer-events:none}
