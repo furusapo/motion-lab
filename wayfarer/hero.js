@@ -1,10 +1,10 @@
 import * as T from './three.module.js';
 
 // Original peach-coloured woodland critter. Every surface is smooth geometry.
-export function createHero(){
+export function createHero(colors={}){
  const root=new T.Group(),body=new T.Group();root.add(body);
  const mat=(color,roughness=.82)=>new T.MeshStandardMaterial({color,roughness,metalness:0});
- const fur=mat(0xf1c69c),cream=mat(0xfff3da),inner=mat(0xc4d7bf),pink=mat(0xefaaa1),ink=mat(0x443c37),teal=mat(0x63998c),ochre=mat(0xc79557),glint=mat(0xffffff,.4);
+ const fur=mat(colors.fur??0xf1c69c),cream=mat(0xfff3da),inner=mat(0xc4d7bf),pink=mat(0xefaaa1),ink=mat(0x443c37),teal=mat(colors.scarf??0x63998c),ochre=mat(0xc79557),glint=mat(0xffffff,.4);
  const geo=new T.SphereGeometry(1,32,24);
  function puff(parent,material,x,y,z,sx,sy=sx,sz=sx){const m=new T.Mesh(geo,material);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  function curve(parent,points,material,radius=.012){const g=new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p))),24,radius,8,false),m=new T.Mesh(g,material);m.castShadow=true;parent.add(m);return m;}
@@ -25,7 +25,11 @@ export function createHero(){
  const ribbon=new T.Group();ribbon.position.set(.16,.7,-.09);body.add(ribbon);puff(ribbon,teal,0,-.12,-.055,.055,.18,.032);
  const bag=new T.Group();bag.position.set(0,.47,-.244);body.add(bag);puff(bag,ochre,0,0,0,.151,.18,.075);puff(bag,teal,0,.125,-.005,.156,.06,.08);puff(bag,cream,0,.025,-.076,.024,.027,.012);
  const tail=new T.Group();tail.position.set(0,.28,-.175);body.add(tail);puff(tail,fur,0,.025,-.1,.115,.12,.18);puff(tail,cream,0,.03,-.235,.092,.095,.10);
- function pose(distance,time,speed,jumping,turn=0,reduced=false){
+ const hat=new T.Group();head.add(hat);hat.visible=false;
+ puff(hat,teal,0,.47,0,.37,.035,.3);puff(hat,inner,0,.55,0,.245,.14,.22);puff(hat,cream,.17,.59,.16,.035,.035,.035);
+ const pouch=new T.Group();pouch.position.set(.29,.38,-.12);body.add(pouch);pouch.visible=false;puff(pouch,ochre,0,0,0,.12,.14,.08);puff(pouch,cream,0,.07,-.07,.1,.025,.02);
+ function equip(hasHat,hasPouch){hat.visible=hasHat;pouch.visible=hasPouch;}
+ function pose(distance,time,speed,jumping,turn=0,reduced=false,mood={}){
   const run=Math.min(speed/5,1),phase=distance*2.1,bounce=Math.abs(Math.sin(phase));
   body.position.y=reduced?0:bounce*.047*run+Math.sin(time*2)*.009*(1-run);
   body.rotation.set(.035*run,0,reduced?0:Math.sin(phase)*.045*run-turn*.25);
@@ -36,6 +40,12 @@ export function createHero(){
   tail.rotation.set(reduced?0:Math.sin(phase-.8)*.16*run,reduced?0:Math.sin(phase*.5)*.2*run,0);
   ribbon.rotation.x=.2+run*.45+(reduced?0:Math.sin(time*8)*.13*run);
   bag.rotation.z=reduced?0:Math.sin(phase-.4)*.06*run;
+  const idle=mood.idle||0,sit=idle>3&&!jumping,asleep=idle>9&&!jumping;
+  if(sit){body.position.y-=.12;feet[0].rotation.x=feet[1].rotation.x=-.65;head.rotation.x=asleep?.22:.07;}
+  if(asleep)for(const eye of eyes)eye.scale.y=.008;
+  if(!reduced&&run<.15){ears[0].rotation.z+=Math.pow(Math.max(0,Math.sin(time*2.6)),12)*.23;head.rotation.y+=Math.sin(time*.7)*.08;}
+  if(mood.joy&&!reduced){body.position.y+=Math.abs(Math.sin(time*12))*.09;paws[0].rotation.x=paws[1].rotation.x=-.8;ears[0].rotation.z-=.1;ears[1].rotation.z+=.1;}
+
  }
- return {root,pose};
+ return {root,pose,equip};
 }

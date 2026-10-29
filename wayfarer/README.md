@@ -37,3 +37,15 @@ The available cloud browser has WebGL disabled. Its unsupported-browser screen w
 The protagonist uses smooth 32×24 sphere surfaces, a large rounded head and small body, short paws, mint ear interiors, peach fur, a cream muzzle and tail tip, and a tiny acorn pack. No existing character model or image is used. The chase camera is pulled back and lowered for the smaller character. The face-view button pauses travel and moves the camera around to the front; starting again restores the chase view.
 
 Round-animal validation: 5,046 portrait framing cases (including jump height), 200 finite animation-pose updates, and no box geometry or flat-shaded character surfaces. Offline front and chase projections inspected. Actual WebGL playback remains unverified in the available GPU-disabled browser.
+
+## Forest friends update
+- 48 collectible acorns; collect by approaching on the path. E / on-screen action interacts.
+- Forest shop near route position 100: hat costs 3, pouch costs 2; equipped immediately.
+- Friend near 190: travel pauses for the encounter; give 3 acorns to recruit. Resume using Play.
+- Return together to the house at the end of the route. Missing friend ending offers return to forest.
+- Idle ear twitches, sitting after 3 seconds, sleep after 9 seconds; happy pickup/recruit poses.
+- Reusable footprints, puddle ripples and droplets; mint companion follows with a smaller smooth model.
+- Progress lasts for the current page session. Restart resets items and friendship. Timeline/biome shortcuts preserve progress; collected acorns cannot be farmed twice.
+- Walk speed lowered to 4.6; dash 8.5; slow walk 2.
+
+Validation: quest rule checks and full headless Three.js collection/shop/friendship/follow/reset simulation. Browser WebGL remains unavailable; end-user GPU rendering and touch play are unverified.
